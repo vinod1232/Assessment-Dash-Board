@@ -22,7 +22,86 @@ export default function AssessmentDashboard() {
 
   useEffect(() => {
     loadAssessments();
+    
+    // Check URL hash for direct assessment links (from new tabs)
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#assessment/')) {
+      const parts = hash.split('/');
+      if (parts.length >= 3) {
+        const formType = parts[1]; // 'cans', 'fare', 'residential'
+        const assessmentId = parts[2];
+        
+        console.log('🔗 Loading from URL hash:', formType, assessmentId);
+        
+        // Check localStorage first (for new tabs), then sessionStorage (for same tab)
+        let savedDraftData = localStorage.getItem('currentAssessmentDraft') || sessionStorage.getItem('selectedDraft');
+        if (savedDraftData) {
+          try {
+            const draftData = JSON.parse(savedDraftData);
+            if (draftData.id === assessmentId) {
+              setSelectedDraft(draftData);
+              setActiveForm(formType);
+              // Clear the localStorage temp data after using it
+              localStorage.removeItem('currentAssessmentDraft');
+              console.log('✅ Assessment loaded from URL hash');
+              return;
+            }
+          } catch (error) {
+            console.error('Failed to parse draft from URL:', error);
+          }
+        }
+        
+        // If not in localStorage/sessionStorage, try to load from localStorage assessments
+        const stored = localStorage.getItem('assessments');
+        if (stored) {
+          try {
+            const allAssessments = JSON.parse(stored);
+            const assessment = allAssessments.find(a => a.id === assessmentId);
+            if (assessment) {
+              setSelectedDraft(assessment);
+              setActiveForm(formType);
+              console.log('✅ Assessment loaded from localStorage');
+              return;
+            }
+          } catch (error) {
+            console.error('Failed to load assessment from localStorage:', error);
+          }
+        }
+      }
+    }
+    
+    // Check for active form in sessionStorage (for page refresh recovery)
+    const savedActiveForm = sessionStorage.getItem('activeForm');
+    const savedDraftData = sessionStorage.getItem('selectedDraft');
+    
+    if (savedActiveForm && !hash.startsWith('#assessment/')) {
+      setActiveForm(savedActiveForm);
+      if (savedDraftData) {
+        try {
+          setSelectedDraft(JSON.parse(savedDraftData));
+        } catch (error) {
+          console.error('Failed to parse saved draft data:', error);
+        }
+      }
+    }
   }, []);
+
+  // Save activeForm to sessionStorage whenever it changes
+  useEffect(() => {
+    if (activeForm) {
+      sessionStorage.setItem('activeForm', activeForm);
+      if (selectedDraft) {
+        sessionStorage.setItem('selectedDraft', JSON.stringify(selectedDraft));
+        // Update URL hash for shareable/bookmarkable links
+        window.location.hash = `#assessment/${activeForm}/${selectedDraft.id}`;
+      }
+    } else {
+      // Clear when returning to dashboard
+      sessionStorage.removeItem('activeForm');
+      sessionStorage.removeItem('selectedDraft');
+      window.location.hash = '';
+    }
+  }, [activeForm, selectedDraft]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -36,31 +115,34 @@ export default function AssessmentDashboard() {
         const parsed = JSON.parse(stored);
         setAssessments(parsed);
       } else {
-  setAssessments([
-    {
-      id: '345968',
-      caseId: '12345',
-      type: 'F.A.R.E',
-      status: 'Completed',
-      createdOn: '08/10/2025, 09:30:15 AM'
-    },
-    {
-      id: '789614',
-      caseId: '23456',
-      type: 'CANS',
-      status: 'In-progress',
-      createdOn: '11/09/2025, 02:45:22 PM'
-    },
-    // Add 10 more demo assessments here for testing pagination
-    ...Array.from({ length: 10 }, (_, i) => ({
-      id: `DEMO-${100000 + i}`,
-      caseId: `CASE-${5000 + i}`,
-      type: ['CANS', 'F.A.R.E', 'Residential'][i % 3],
-      status: ['Completed', 'In-progress', 'Draft'][i % 3],
-      createdOn: new Date(2025, 10, i + 1).toLocaleString('en-US')
-    }))
-  ]);
-}
+        setAssessments([
+          {
+            id: '345968',
+            caseId: '12345',
+            type: 'F.A.R.E',
+            status: 'Completed',
+            createdOn: '08/10/2025, 09:30:15 AM',
+            createdBy: 'John Smith'
+          },
+          {
+            id: '789614',
+            caseId: '23456',
+            type: 'CANS',
+            status: 'In-progress',
+            createdOn: '11/09/2025, 02:45:22 PM',
+            createdBy: 'Jane Doe'
+          },
+          // Add 10 more demo assessments here for testing pagination
+          ...Array.from({ length: 10 }, (_, i) => ({
+            id: `DEMO-${100000 + i}`,
+            caseId: `CASE-${5000 + i}`,
+            type: ['CANS', 'F.A.R.E', 'Residential'][i % 3],
+            status: ['Completed', 'In-progress', 'Draft'][i % 3],
+            createdOn: new Date(2025, 10, i + 1).toLocaleString('en-US'),
+            createdBy: ['John Smith', 'Jane Doe', 'Bob Johnson'][i % 3]
+          }))
+        ]);
+      }
       
     } catch (error) {
       console.error('Error loading assessments:', error);
@@ -94,7 +176,7 @@ export default function AssessmentDashboard() {
       id: assessmentId,
       caseId: data.caseId || data.overview?.caseId || 'N/A',
       type: 'CANS',
-       createdBy: data.createdBy || 'Current User',
+      createdBy: data.createdBy || 'Current User',
       status: data.status || 'In-progress',
       createdOn: new Date().toLocaleString('en-US', { 
         month: '2-digit', 
@@ -113,7 +195,12 @@ export default function AssessmentDashboard() {
     const saved = saveAssessment(newAssessment);
     
     if (saved) {
-      alert('CANS assessment saved successfully!');
+      // Show appropriate message based on status
+      if (data.status === 'Completed') {
+        alert('✅ CANS assessment submitted successfully!');
+      } else {
+        alert('✅ CANS assessment saved as draft!');
+      }
       setActiveForm(null);
       setSelectedDraft(null);
       loadAssessments();
@@ -130,7 +217,7 @@ export default function AssessmentDashboard() {
       caseId: data.caseId || 'N/A',
       type: 'F.A.R.E',
       status: data.status || 'In-progress',
-       createdBy: data.createdBy || 'Current User',
+      createdBy: data.createdBy || 'Current User',
       createdOn: new Date().toLocaleString('en-US', { 
         month: '2-digit', 
         day: '2-digit', 
@@ -148,7 +235,12 @@ export default function AssessmentDashboard() {
     const saved = saveAssessment(newAssessment);
     
     if (saved) {
-      alert('FARE assessment saved successfully!');
+      // Show appropriate message based on status
+      if (data.status === 'Completed') {
+        alert('✅ FARE assessment submitted successfully!');
+      } else {
+        alert('✅ FARE assessment saved as draft!');
+      }
       setActiveForm(null);
       setSelectedDraft(null);
       loadAssessments();
@@ -165,7 +257,7 @@ export default function AssessmentDashboard() {
       caseId: data.contract_number || 'N/A',
       type: 'Residential',
       status: data.status || 'In-progress',
-       createdBy: data.createdBy || 'Current User',
+      createdBy: data.createdBy || 'Current User',
       createdOn: new Date().toLocaleString('en-US', { 
         month: '2-digit', 
         day: '2-digit', 
@@ -181,7 +273,12 @@ export default function AssessmentDashboard() {
     const saved = saveAssessment(newAssessment);
     
     if (saved) {
-      alert('Residential assessment saved successfully!');
+      // Show appropriate message based on status
+      if (data.status === 'Completed') {
+        alert('✅ Residential assessment submitted successfully!');
+      } else {
+        alert('✅ Residential assessment saved as draft!');
+      }
       setActiveForm(null);
       setSelectedDraft(null);
       loadAssessments();
@@ -193,6 +290,9 @@ export default function AssessmentDashboard() {
   const handleCloseForm = () => {
     setActiveForm(null);
     setSelectedDraft(null);
+    // Clear URL hash
+    window.location.hash = '';
+    // Session will be cleared by the useEffect above
   };
 
   const getStatusClass = (status) => {
@@ -302,14 +402,14 @@ export default function AssessmentDashboard() {
 
   // Otherwise show the dashboard
   return (
-  <div className="dashboard-container">
-    <div className="dashboard-header">
-      <div className="header-content-center">
-        <h1 className="header-title-center">
-          ASSESSMENT ENGINE DASHBOARD
-        </h1>
+    <div className="dashboard-container">
+      <div className="dashboard-header">
+        <div className="header-content-center">
+          <h1 className="header-title-center">
+            ASSESSMENT ENGINE DASHBOARD
+          </h1>
+        </div>
       </div>
-    </div>
 
       <div className="main-content">
         <div>
@@ -424,20 +524,34 @@ export default function AssessmentDashboard() {
                     <tr key={assessment.id}>
                       <td>
                         <a 
-                          href="#" 
+                          href={`#assessment/${assessment.type.toLowerCase().replace('.', '').replace(' ', '')}/${assessment.id}`}
                           className="assessment-link"
                           onClick={(e) => {
-                            e.preventDefault();
-                            setSelectedDraft(assessment);
+                            // Only prevent default if not opening in new tab
+                            if (!e.ctrlKey && !e.metaKey && e.button === 0) {
+                              e.preventDefault();
+                            }
                             
-                            if (assessment.type === 'CANS') {
-                              setActiveForm('cans');
-                            }
-                            else if (assessment.type === 'F.A.R.E') {
-                              setActiveForm('fare');
-                            }
-                            else if (assessment.type === 'Residential') {
-                              setActiveForm('residential');
+                            // Save to both sessionStorage (same tab) and localStorage (new tab support)
+                            sessionStorage.setItem('selectedDraft', JSON.stringify(assessment));
+                            localStorage.setItem('currentAssessmentDraft', JSON.stringify(assessment));
+                            
+                            // If opening in same tab, set state directly
+                            if (!e.ctrlKey && !e.metaKey && e.button === 0) {
+                              setSelectedDraft(assessment);
+                              
+                              if (assessment.type === 'CANS') {
+                                sessionStorage.setItem('activeForm', 'cans');
+                                setActiveForm('cans');
+                              }
+                              else if (assessment.type === 'F.A.R.E') {
+                                sessionStorage.setItem('activeForm', 'fare');
+                                setActiveForm('fare');
+                              }
+                              else if (assessment.type === 'Residential') {
+                                sessionStorage.setItem('activeForm', 'residential');
+                                setActiveForm('residential');
+                              }
                             }
                           }}
                         >
@@ -453,6 +567,7 @@ export default function AssessmentDashboard() {
                         </span>
                       </td>
                       <td>{assessment.createdOn}</td>
+                      <td>{assessment.createdBy || 'N/A'}</td>
                     </tr>
                   ))
                 ) : (
