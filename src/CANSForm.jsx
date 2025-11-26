@@ -1,12 +1,11 @@
-
 import React, { useEffect, useMemo, useState, useRef } from "react";
-import { Checkmark20Filled, Warning20Filled } from "@fluentui/react-icons";
+import { Checkmark20Filled, Warning20Filled, Warning20Regular, CheckmarkCircle20Filled, Circle20Regular, ErrorCircle20Filled } from "@fluentui/react-icons";
 import { demoSections } from "./demosection";
 import styles from "./formstyle";
 import SubmitSuccessScreen from "./SubmitSuccessScreen";
 import ReviewScreen from "./ReviewScreen";
 // import { saveFormToServer } from "../api/saveHandlers";
-const API_BASE = "http://localhost:5000";
+// const API_BASE = "http://localhost:5000";
 /** -------- Demo data placeholders (keep or replace) -------- **/
 const demoOverview = {
   caseId: "",
@@ -25,7 +24,7 @@ const requiredOverviewFields = ["caseId", "caseName", "personId", "memberName", 
 const badgesPerPage = 15;
 
 /* -------------------- COMPONENT -------------------- */
-export default function BasicInfoForm({ draftData = null, overview = demoOverview, sections = demoSections, onClose }) {
+export default function BasicInfoForm({ overview = demoOverview, sections = demoSections, onClose, onSave, draftData }) {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, "0");
   const todayIso = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -124,6 +123,7 @@ export default function BasicInfoForm({ draftData = null, overview = demoOvervie
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const [serverDocId, setServerDocId] = useState(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isViewOnly, setIsViewOnly] = useState(false); // For completed forms opened from dashboard
   const [showReviewScreen, setShowReviewScreen] = useState(false);
   const [showWarningScreen, setShowWarningScreen] = useState(false);
   const [warningTriggered, setWarningTriggered] = useState(false);
@@ -134,30 +134,6 @@ export default function BasicInfoForm({ draftData = null, overview = demoOvervie
   const autosaveIntervalRef = useRef(null);
   const autosaveInFlightRef = useRef(false);
 
-  
-  useEffect(() => {
-  if (!draftData) return;
-
-  // 1️⃣ Set overview
-  if (draftData.overview) {
-    setFormData(prev => ({
-      ...prev,
-      ...draftData.overview
-    }));
-  }
-
-  // 2️⃣ Set answers
-  if (draftData.answers) {
-    setAnswers(draftData.answers);
-  }
-
-  // 3️⃣ If editing → jump to first section
-  setCurrentGlobalIndex(0);
-  setActiveSectionId(visibleSections[0]?.id || null);
-
-}, [draftData, visibleSections]);
-
-
   useEffect(() => {
     formDataRef.current = formData;
   }, [formData]);
@@ -167,6 +143,36 @@ export default function BasicInfoForm({ draftData = null, overview = demoOvervie
   useEffect(() => {
     isDirtyRef.current = isDirty;
   }, [isDirty]);
+
+  // Load draft data when component mounts
+  useEffect(() => {
+    if (draftData) {
+      // Load overview data
+      if (draftData.overview) {
+        setFormData(prev => ({
+          ...prev,
+          ...draftData.overview
+        }));
+      }
+      
+      // Load answers
+      if (draftData.answers) {
+        setAnswers(draftData.answers);
+      }
+      
+      // Set server doc ID if available
+      if (draftData.id) {
+        setServerDocId(draftData.id);
+      }
+      
+      // If opening a completed assessment from dashboard, set as view-only (not submitted)
+      // This allows navigation but disables editing
+      if (draftData.status === 'Completed') {
+        setIsViewOnly(true);
+        isSubmittedRef.current = true; // For autosave prevention
+      }
+    }
+  }, [draftData]);
 
   useEffect(() => {
     if (currentGlobalIndex == null) return;
@@ -368,22 +374,23 @@ function formatSchemaJSON(overview, answers) {
   // Generic save to backend/localStorage (unchanged)
   async function saveDraftPayload(payload) {
     try {
-      if (typeof API_BASE !== "undefined") {
-        const res = await fetch(`${API_BASE}/api/basic-info`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          console.warn("Save failed", res.status, data);
-          return { ok: false, data };
-        }
-        return { ok: true, data };
-      } else {
+      // Backend connectivity commented out - using localStorage only
+      // if (typeof API_BASE !== "undefined") {
+      //   const res = await fetch(`${API_BASE}/api/basic-info`, {
+      //     method: "POST",
+      //     headers: { "Content-Type": "application/json" },
+      //     body: JSON.stringify(payload),
+      //   });
+      //   const data = await res.json();
+      //   if (!res.ok) {
+      //     console.warn("Save failed", res.status, data);
+      //     return { ok: false, data };
+      //   }
+      //   return { ok: true, data };
+      // } else {
         localStorage.setItem("cans_autosave", JSON.stringify(payload));
         return { ok: true, data: { local: true } };
-      }
+      // }
     } catch (err) {
       console.error("saveDraftPayload error", err);
       return { ok: false, data: { error: err.message || String(err) } };
@@ -424,7 +431,6 @@ function formatSchemaJSON(overview, answers) {
     };
   }, []);
 
-
   async function autosaveDraftIfNeeded() {
     if (!anyAnswered) return;
     if (!isDirtyRef.current) return;
@@ -444,7 +450,7 @@ function formatSchemaJSON(overview, answers) {
     try {
       const schema = formatSchemaJSON(formDataRef.current, answersRef.current);
       const payload = {
-        status: "draft",
+        status: "In-progress",
         schema_json: schema,
         overview: formDataRef.current,
         answers: answersRef.current,
@@ -537,7 +543,7 @@ function formatSchemaJSON(overview, answers) {
     try {
       const formattedSchema = formatSchemaJSON(formData, answers, visibleSections);
       const payload = {
-        status: "draft",
+        status: "In-progress",
         schema_json: formattedSchema,
         overview: formData,
         answers,
@@ -553,8 +559,24 @@ function formatSchemaJSON(overview, answers) {
       if (res.data?.id) setServerDocId(res.data.id);
       setIsDirty(false);
       setLastSavedAt(new Date().toISOString());
-      alert("✅ Saved as draft!");
+      
       savedOk = true;
+      
+      // Call onSave callback to update dashboard
+      if (typeof onSave === "function") {
+        const assessmentId = draftData?.id || serverDocId || res.data?.id || `CANS-${Date.now()}`;
+        onSave({
+          id: assessmentId,
+          caseId: formData.caseId,
+          caseName: formData.caseName,
+          status: "In-progress",
+          createdBy: formData.workerName || "Current User",
+          overview: formData,
+          answers: answers,
+          data: payload
+        });
+      }
+      
     } catch (err) {
       console.error("Save draft error:", err);
       alert("Error while saving draft: " + (err.message || String(err)));
@@ -625,6 +647,21 @@ function formatSchemaJSON(overview, answers) {
       isSubmittedRef.current = true;
       stopAutosave();
 
+      // Call onSave callback to update dashboard
+      if (typeof onSave === "function") {
+        const assessmentId = draftData?.id || serverDocId || res.data?.id || `CANS-${Date.now()}`;
+        onSave({
+          id: assessmentId,
+          caseId: formData.caseId,
+          caseName: formData.caseName,
+          status: "Completed",
+          createdBy: formData.workerName || "Current User",
+          overview: formData,
+          answers: answers,
+          data: payload
+        });
+      }
+      
       // Show success screen instead of alert
       // alert("Form is submitted Successfully");
     } catch (err) {
@@ -641,8 +678,8 @@ function formatSchemaJSON(overview, answers) {
   const badgeRowsForPage = activeSection.rows.slice(badgePageStartIndexInSection, badgePageStartIndexInSection + badgesPerPage);
   const sectionStartGlobal = sectionRanges.get(activeSectionId)?.start ?? 0;
   // eslint-disable-next-line no-unused-vars
-  const submitDisabled = !canSubmit || isSaving || isSubmitted;
-  const saveDisabled = !anyAnswered || isSaving || isSubmitted;
+  const submitDisabled = !canSubmit || isSaving || isSubmitted || isViewOnly;
+  const saveDisabled = !anyAnswered || isSaving || isSubmitted || isViewOnly;
 
   // ShouldShowDescribe unchanged
   const shouldShowDescribe = (() => {
@@ -657,7 +694,22 @@ function formatSchemaJSON(overview, answers) {
   return (
     <>
       <div style={styles.container}>
-      <div style={styles.header}>Child and Adolescent Needs and Strengths (CANS)</div>
+      <div style={styles.header}>
+        Child and Adolescent Needs and Strengths (CANS)
+        {isViewOnly && (
+          <span style={{ 
+            marginLeft: 16, 
+            fontSize: 14, 
+            fontWeight: 600, 
+            color: "#636F9E",
+            background: "#f5f5f5",
+            padding: "4px 12px",
+            borderRadius: 4
+          }}>
+            Read-Only Mode
+          </span>
+        )}
+      </div>
 
       <div style={styles.overviewCard}>
         <div style={{ fontSize: 16, fontWeight: 600, color: "#111827", marginBottom: 16 }}>Overview</div>
@@ -721,7 +773,7 @@ function formatSchemaJSON(overview, answers) {
                 onChange={(e) => updateFormField("memberRole", e.target.value)}
                 style={{ ...styles.memberRoleInput, padding: "6px 8px" }}
                 aria-label="Member role"
-                disabled={isSubmitted}
+                disabled={isSubmitted || isViewOnly}
               >
                 <option value="">-- Select role --</option>
                 <option value="Child">Child</option>
@@ -746,11 +798,25 @@ function formatSchemaJSON(overview, answers) {
                 key={s.id}
                 type="button"
                 style={styles.leftBtn(active)}
-                onClick={() => { onSelectSection(s.id); setShowWarningScreen(false); }}
+                onClick={() => { 
+                  if (showReviewScreen) {
+                    // Exit review screen and go to selected section
+                    setShowReviewScreen(false);
+                    const r = sectionRanges.get(s.id);
+                    if (r) {
+                      setActiveSectionId(s.id);
+                      setCurrentGlobalIndex(r.start);
+                      setBubblePageIndex(0);
+                    }
+                  } else {
+                    onSelectSection(s.id); 
+                    setShowWarningScreen(false);
+                  }
+                }}
                 title={s.title}
               >
                 <span style={styles.sectionBadge(completed, incomplete)}>
-                  {completed ? <Checkmark20Filled /> : incomplete ? <Warning20Filled /> : ""}
+                  {completed ? <Checkmark20Filled style={{ width: 16, height: 16 }} /> : incomplete ? <Warning20Filled style={{ width: 16, height: 16 }} /> : ""}
                 </span>
                 <span style={styles.leftBtnText}>{s.title}</span>
               </button>
@@ -760,7 +826,7 @@ function formatSchemaJSON(overview, answers) {
 
         {/* RIGHT PANEL */}
         <section style={styles.rightCard(styles.pageHeight)}>
-          {isSubmitted ? (
+          {isSubmitted && !isViewOnly ? (
             <SubmitSuccessScreen 
               formData={formData}
               sections={visibleSections}
@@ -779,7 +845,7 @@ function formatSchemaJSON(overview, answers) {
           ) : showWarningScreen ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "flex-start", padding: 48, height: "100%", gap: 24 }}>
               <div style={{ width: 64, height: 64, borderRadius: 32, background: "#f59e0b", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
-                <Warning20Filled style={{ width: 32, height: 32 }} />
+                <Warning20Regular style={{ width: 32, height: 32, color: '#fff' }} />
               </div>
               <h2 style={{ fontSize: 24, fontWeight: 400, color: "#111827", margin: 0 }}>
                 {incompleteSections.size} {incompleteSections.size === 1 ? 'section requires' : 'sections require'} your attention...
@@ -790,6 +856,9 @@ function formatSchemaJSON(overview, answers) {
             </div>
           ) : showReviewScreen ? (
             <ReviewScreen 
+              sections={visibleSections}
+              answers={answers}
+              overview={formData}
               onBack={() => {
                 setShowReviewScreen(false);
                 // Go to first section, first question
@@ -802,6 +871,17 @@ function formatSchemaJSON(overview, answers) {
               }} 
               onSubmit={handleComplete}
               isSaving={isSaving}
+              activeSectionId={activeSectionId}
+              onSectionChange={(sectionId) => {
+                // Exit review screen and go to the selected section
+                setShowReviewScreen(false);
+                const r = sectionRanges.get(sectionId);
+                if (r) {
+                  setActiveSectionId(sectionId);
+                  setCurrentGlobalIndex(r.start);
+                  setBubblePageIndex(0);
+                }
+              }}
             />
           ) : (
             <>
@@ -866,7 +946,7 @@ function formatSchemaJSON(overview, answers) {
                                 onChange={() => setAnswer(currentRow.id, { score: null, unk: isUnknown, na: !isUnknown })}
                                 style={styles.visibleRadio}
                                 aria-label={raw}
-                                disabled={isSubmitted}
+                                disabled={isSubmitted || isViewOnly}
                               />
                               {/* empty numeric space for alignment */}
                               <div style={styles.optionNumber(false, checked)} />
@@ -889,7 +969,7 @@ function formatSchemaJSON(overview, answers) {
                               }}
                               style={styles.visibleRadio}
                               aria-label={`Option ${idx}: ${raw}`}
-                              disabled={isSubmitted}
+                              disabled={isSubmitted || isViewOnly}
                             />
 
                             {/* plain number label (no box) */}
@@ -910,12 +990,12 @@ function formatSchemaJSON(overview, answers) {
                           <textarea
                             style={{
                               ...styles.describeArea,
-                              border: missingDescriptions.has(currentRow.id) ? "1px solid #131212ff" : "1px solid #d1d5db",
+                              border: missingDescriptions.has(currentRow.id) ? "1px solid #6b7280" : "1px solid #d1d5db",
                             }}
                             placeholder="Explain the description here"
                             value={(answers[currentRow.id] || {}).description || ""}
                             onChange={(e) => setAnswer(currentRow.id, { description: e.target.value })}
-                            disabled={isSubmitted}
+                            disabled={isSubmitted || isViewOnly}
                           />
                         </div>
                       )}
@@ -938,7 +1018,7 @@ function formatSchemaJSON(overview, answers) {
                 disabled={saveDisabled}
                 aria-disabled={saveDisabled}
               >
-                {isSaving ? "Saving..." : isAutosaving ? "Autosaving..." : "Save as Draft & Close"}
+                {isSaving ? "Saving..." : isAutosaving ? "Autosaving..." : "Save as Draft & Close Form"}
               </button>
             </div>
 

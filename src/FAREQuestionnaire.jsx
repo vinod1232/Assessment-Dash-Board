@@ -773,6 +773,7 @@ const QUESTIONS = [
 export default function FAREQuestionnaire({ onSave, draftData }) {
   const [formData, setFormData] = useState({});
   const [effectiveDate, setEffectiveDate] = useState('');
+  const [showSaveSuccessModal, setShowSaveSuccessModal] = useState(false);
   const [description, setDescription] = useState('');
   const [interviewEnded, setInterviewEnded] = useState(false);
   const [endedReason, setEndedReason] = useState('');

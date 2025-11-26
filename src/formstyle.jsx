@@ -1,4 +1,3 @@
-
 /* -------------------- STYLES -------------------- */
 const styles = {
   container: { 
@@ -37,7 +36,7 @@ const styles = {
     flexDirection: "column",
     gap: 16
   },
-
+ 
   overviewGrid: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr 1fr 1fr",
@@ -45,7 +44,7 @@ const styles = {
     alignItems: "start",
     minHeight: 64,
   },
-
+ 
   overviewLabel: {
     fontSize: 12,
     color: "#6b7280",
@@ -66,7 +65,7 @@ const styles = {
     cursor: "pointer",
     fontWeight: 600,
   },
-
+ 
   overviewDateInput: {
     padding: "6px 10px",
     borderRadius: 6,
@@ -75,7 +74,7 @@ const styles = {
     fontSize: 13,
     marginLeft: 8,
   },
-
+ 
   memberRoleInput: {
     padding: "6px 10px",
     borderRadius: 6,
@@ -84,7 +83,7 @@ const styles = {
     marginLeft: 8,
     width: "60%",
   },
-
+ 
   panel: {
     display: "flex",
     width: 1200,
@@ -98,9 +97,9 @@ const styles = {
     boxShadow: "0 1px 6px rgba(16,24,40,0.06)",
     boxSizing: "border-box",
   },
-
+ 
   input: { width: "100%", padding: "10px 12px", borderRadius: 6, border: "1px solid #d1d5db", boxSizing: "border-box" },
-
+ 
   // left nav (unchanged)
   leftNav: {
     display: "flex",
@@ -117,7 +116,7 @@ const styles = {
     borderRight: "none",
     boxSizing: "border-box",
   },
-
+ 
   sectionListTitle: {
     fontSize: 16,
     color: "#111827",
@@ -125,7 +124,7 @@ const styles = {
     marginBottom: 0,
     fontWeight: 600,
   },
-
+ 
   leftBtn: (active) => ({
     display: "flex",
     width: "100%",
@@ -145,7 +144,7 @@ const styles = {
     cursor: "pointer",
     boxSizing: "border-box",
   }),
-
+ 
   leftBtnText: {
     display: "block",
     whiteSpace: "normal",
@@ -153,9 +152,9 @@ const styles = {
     lineHeight: 1.25,
     fontSize: 14,
   },
-
+ 
   pageHeight: 1040,
-
+ 
   // RIGHT PANEL: padding left/right set to 24px so content sits 24px from container edges
   rightCard: (pageHeight) => ({
     display: "flex",
@@ -173,7 +172,7 @@ const styles = {
     fontFamily: "Segoe UI",
     overflow: "auto",
   }),
-
+ 
   badgeRail: {
     display: "flex",
     gap: 0,
@@ -184,7 +183,7 @@ const styles = {
     whiteSpace: "nowrap",
     overflowX: "visible",
   },
-
+ 
   badge: (active, saved, incomplete = false) => {
     const base = {
       width: 32,
@@ -194,31 +193,34 @@ const styles = {
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
-      border: "1px solid #e5e7eb",
+      border: "2px solid",
       cursor: "pointer",
-      fontWeight: 700,
       flex: "0 0 auto",
       fontSize: 12,
       boxSizing: "border-box",
       margin: 0,
+      transition: "all 0.2s ease",
+      position: "relative",
+      fontFamily: "Segoe UI",
+      fontWeight: 600,
     };
-    if (active) return { ...base, background: "#636f9e", color: "#fff", borderColor: "#636f9e" };
-    if (incomplete) return { ...base, background: "#fee2e2", color: "#991b1b", borderColor: "#fca5a5" };
-    if (saved) return { ...base, background: "#dcfce7", color: "#166534", borderColor: "#dcfce7" };
-    return { ...base, background: "#fff", color: "#374151", borderColor: "#e5e7eb" };
+    if (active) return { ...base, background: "#5b6a9a", color: "#fff", borderColor: "#5b6a9a" };
+    if (incomplete) return { ...base, background: "#fff", color: "#374151", borderColor: "#e5e7eb" };
+    if (saved) return { ...base, background: "#e8f4ea", color: "#166534", borderColor: "#86efac" };
+    return { ...base, background: "#f3f4f6", color: "#374151", borderColor: "#e5e7eb" };
   },
-
+ 
   connector: {
-    flex: "0 0 24px",
-    width: 24,
-    height: 2,
-    background: "#e5e7eb",
+    flex: "0 0 16px",
+    width: 16,
+    height: 1,
+    background: "#d1d5db",
     alignSelf: "center",
-    borderRadius: 2,
+    borderRadius: 0,
     margin: 0,
     boxSizing: "border-box",
   },
-
+ 
   // QUESTION CARD wrapper (use this to create the bordered container for question and options)
   questionCard: {
     borderRadius: 4,
@@ -230,7 +232,7 @@ const styles = {
     marginBottom: 12,
     boxSizing: "border-box",
   },
-
+ 
   // Header bar of the question container; left/right padding matches rightCard (24px)
   qHeader: {
     background: "#636F9E",
@@ -245,7 +247,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
   },
-
+ 
   // qInner padding is set to 24px so option boxes sit 24px away from container edges
   qInner: {
     padding: "24px",
@@ -255,7 +257,7 @@ const styles = {
     boxSizing: "border-box",
     background: "#fff",
   },
-
+ 
   // Option row is a box (as in figma)
   optionRow: (checked) => ({
     display: "flex",
@@ -272,7 +274,7 @@ const styles = {
     boxSizing: "border-box",
     minHeight: 52,
   }),
-
+ 
   // Plain numeric label (no box) like "0" "1" "2"
   optionNumber: (hasNumber, checked) => ({
     width: 28,
@@ -285,7 +287,7 @@ const styles = {
     alignSelf: "center",
     marginRight: 8,
   }),
-
+ 
   visibleRadio: {
     width: 18,
     height: 18,
@@ -295,7 +297,7 @@ const styles = {
     accentColor: "#636F9E",
     alignSelf: "center",
   },
-
+ 
   optionBody: {
     flex: 1,
     display: "flex",
@@ -304,9 +306,9 @@ const styles = {
     color: "#111827",
     fontSize: 13,
   },
-
+ 
   describeArea: { width: "100%", minHeight: 130, maxHeight: 320, padding: 12, borderRadius: 6, border: "1px solid #d1d5db", boxSizing: "border-box", resize: "vertical", fontFamily: "Segoe UI" },
-
+ 
   // footer area removed from outer panel - we'll render Save/Submit inside the questionCard
   pageFooter: { display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: -14, flexShrink: 0 },
   pageSaveRow: { display: "flex", justifyContent: "center", gap: 12, alignItems: "center", flex: "0 0 auto" },
@@ -314,7 +316,7 @@ const styles = {
   btn: { padding: "10px 14px", borderRadius: 8, border: "1px solid #d1d5db", background: "#fff", cursor: "pointer" },
   btnPrimary: { padding: "10px 14px", borderRadius: 8, border: "1px solid #636F9E", background: "#636F9E", color: "#fff", cursor: "pointer" },
   disabledBtn: { opacity: 0.5, cursor: "not-allowed" },
-
+ 
   sectionBadge: (completed, incomplete = false) => ({
     display: "inline-flex",
     alignItems: "center",
@@ -330,7 +332,7 @@ const styles = {
     marginRight: 8,
     flex: "0 0 auto",
   }),
-
+ 
   // Confirmation modal styles
   confirmOverlay: {
     position: "fixed",
@@ -357,7 +359,6 @@ const styles = {
     marginTop: 12,
   },
 };
-
-
-
+ 
+ 
 export default styles;

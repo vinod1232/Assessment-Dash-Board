@@ -1,6 +1,6 @@
 import React from "react";
 import { Checkmark24Filled } from "@fluentui/react-icons";
-
+ 
 const SubmitSuccessScreen = ({ onClose }) => {
   const styles = {
     container: {
@@ -55,26 +55,26 @@ const SubmitSuccessScreen = ({ onClose }) => {
       fontFamily: "Segoe UI",
     },
   };
-
+ 
   return (
-    <div style={styles.container}>
-      <div style={styles.iconContainer}>
-        <Checkmark24Filled style={{ width: 32, height: 32 }} />
-      </div>
-
+<div style={styles.container}>
+<div style={styles.iconContainer}>
+<Checkmark24Filled style={{ width: 32, height: 32 }} />
+</div>
+ 
       <h2 style={styles.title}>Thank you!</h2>
-
+ 
       <p style={styles.message}>
         Your Child and Adolescent Needs and Strengths (CANS) assessment form has been submitted.
-      </p>
-
+</p>
+ 
       <div style={styles.buttonWrapper}>
-        <button style={styles.button} onClick={onClose}>
+<button style={styles.button} onClick={onClose}>
           Return to the Dashboard
-        </button>
-      </div>
-    </div>
+</button>
+</div>
+</div>
   );
 };
-
+ 
 export default SubmitSuccessScreen;
